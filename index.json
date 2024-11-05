@@ -1,0 +1,30 @@
+{
+                            "startBlock": {
+                                "opcode": "event_whenflagclicked",
+                                "next": "moveBlock",
+                                "parent": null,
+                                "inputs": {},
+                                "fields": {},
+                                "shadow": false,
+                                "topLevel": true,
+                                "x": 252,
+                                "y": 156
+                            },
+                            "moveBlock": {
+                                "opcode": "motion_movesteps",
+                                "next": null,
+                                "parent": "startBlock",
+                                "inputs": {
+                                    "STEPS": [
+                                        1,
+                                        [
+                                            4,
+                                            "10"
+                                        ]
+                                    ]
+                                },
+                                "fields": {},
+                                "shadow": false,
+                                "topLevel": false
+                            }
+}

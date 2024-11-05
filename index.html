@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Scratch 3 Project</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+    <button id="createProjectButton">Create Scratch Project</button>
+    <script>
+        async function loadImage(url) {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Uint8Array(await blob.arrayBuffer());
+        }
+
+        document.getElementById('createProjectButton').addEventListener('click', async () => {
+            // Define the Scratch project structure based on your provided JSON
+            const costumeImageUUID = crypto.randomUUID().replace(/-/g, "");
+            function generateRandomString(length) {
+                const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                let result = '';
+                for (let i = 0; i < length; i++) {
+                    const randomIndex = Math.floor(Math.random() * characters.length);
+                    result += characters[randomIndex];
+                }
+                return result;
+            }
+
+            const project = {
+                "extensions": [],
+                "meta": {
+                    "agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+                    "semver": "3.0.0",
+                    "vm": "4.8.32"
+                },
+                "monitors": [],
+                "targets": [
+                    {
+                        "blocks": {},
+                        "broadcasts": {},
+                        "comments": {},
+                        "costumes": [
+                            {
+                                "assetId": "cd21514d0531fdffb22204e0ec5ed84a",
+                                "dataFormat": "svg",
+                                "md5ext": "cd21514d0531fdffb22204e0ec5ed84a.svg",
+                                "name": "backdrop1",
+                                "rotationCenterX": 240,
+                                "rotationCenterY": 180
+                            }
+                        ],
+                        "currentCostume": 0,
+                        "isStage": true,
+                        "layerOrder": 0,
+                        "lists": {},
+                        "name": "Stage",
+                        "sounds": [
+                            {
+                                "assetId": "83a9787d4cb6f3b7632b4ddfebf74367",
+                                "dataFormat": "wav",
+                                "format": "",
+                                "md5ext": "83a9787d4cb6f3b7632b4ddfebf74367.wav",
+                                "name": "pop",
+                                "rate": 44100,
+                                "sampleCount": 1032
+                            }
+                        ],
+                        "tempo": 60,
+                        "textToSpeechLanguage": null,
+                        "variables": {
+                            "`jEk@4|i[#Fk?(8x)AV.-my variable": [
+                                "my variable",
+                                0
+                            ]
+                        },
+                        "videoState": "on",
+                        "videoTransparency": 50,
+                        "volume": 100
+                    },
+                    {
+                        "blocks": {
+                        },
+                        "broadcasts": {},
+                        "comments": {},
+                        "costumes": [
+                            {
+                                "assetId": costumeImageUUID,
+                                "bitmapResolution": 1,
+                                "dataFormat": "svg",
+                                "md5ext": `${costumeImageUUID}.svg`,
+                                "name": "costume1",
+                                "rotationCenterX": 48,
+                                "rotationCenterY": 50
+                            }
+                        ],
+                        "currentCostume": 0,
+                        "direction": 90,
+                        "draggable": false,
+                        "isStage": false,
+                        "layerOrder": 1,
+                        "lists": {},
+                        "name": "Sprite1",
+                        "rotationStyle": "all around",
+                        "size": 100,
+                        "sounds": [
+                            {
+                                "assetId": "83c36d806dc92327b9e7049a565c6bff",
+                                "dataFormat": "wav",
+                                "format": "",
+                                "md5ext": "83c36d806dc92327b9e7049a565c6bff.wav",
+                                "name": "Meow",
+                                "rate": 44100,
+                                "sampleCount": 37376
+                            }
+                        ],
+                        "variables": {},
+                        "visible": true,
+                        "volume": 100,
+                        "x": 0,
+                        "y": 0
+                    }
+                ]
+            };
+
+            // Create a new JSZip instance
+            const zip = new JSZip();
+
+            // Add the project.json file to the zip
+            zip.file("project.json", JSON.stringify(project));
+
+            // Load and add the images to the zip
+            const backdropImage = await loadImage('backdrop.svg'); // Replace with your actual backdrop image path
+            const costumeImage = await loadImage('costume1.svg'); // Replace with your actual costume image path
+
+            // Add the images to the ZIP
+            zip.file("cd21514d0531fdffb22204e0ec5ed84a.svg", backdropImage);
+            zip.file(`${costumeImageUUID}.svg`, costumeImage);
+
+            // Load and add the sounds to the zip
+            const popSound = await loadImage('pop.wav'); // Replace with your actual sound file path
+            const meowSound = await loadImage('meow.wav'); // Replace with your actual sound file path
+
+            // Add the sounds to the ZIP
+            zip.file("83a9787d4cb6f3b7632b4ddfebf74367.wav", popSound);
+            zip.file("83c36d806dc92327b9e7049a565c6bff.wav", meowSound);
+
+            // Generate the zip file
+            zip.generateAsync({ type: "blob" }).then((content) => {
+                // Create a link to download the Blob as a .sb3 file
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'new_project.sb3';
+                a.click();
+                URL.revokeObjectURL(url);
+            }).catch((error) => {
+                console.error("Error generating ZIP:", error);
+            });
+        });
+    </script>
+</body>
+</html>
