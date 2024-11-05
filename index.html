@@ -4,9 +4,346 @@
     <meta charset="UTF-8">
     <title>Create Scratch 3 Project</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling */
+            background-color: #1e1e1e;
+        }
+        /* Style the container to add space at the top and fill the remaining viewport */
+        #container {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
 </head>
 <body>
     <button id="createProjectButton">Create Scratch Project</button>
+    <div id="container"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.40.0/min/vs/loader.js"></script>
+    <script>
+        var errors = 0
+        var warnings = 0
+        var incorrectVar = ""
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.40.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            monaco.editor.defineTheme('textscratch-dark', {
+                base: 'vs-dark',
+                inherit: true,
+                colors: {},
+                rules: [
+                    { token: 'end', foreground: 'E86056' },
+                    { token: 'error', foreground: 'FF0000' },
+                    { token: 'function', foreground: 'E5C07B' }
+                ],
+            });
+            
+            // Define textscratch as a new language
+            monaco.languages.register({ id: 'textscratch' });
+            
+            // Define syntax highlighting for textscratch
+            monaco.languages.setMonarchTokensProvider('textscratch', {
+                tokenizer: {
+                    root: [
+                        // [/jmp\s+\d+/, 'keyword'],
+                        // [/jmp\s+\D/, 'error'],
+                        [/dec|inc|isz|jmp/, 'keyword'],
+                        [/[A-Z_][A-Z_]*/, 'variable'],
+                        [/(#|;).*$/, 'comment'],
+                        [/[0-9]+/, 'number'],
+                        // [/[\[\]]/, 'delimiter'],
+                        [/stp/, 'end'],
+                        [/position/, 'number'],
+                        [/variable/, 'variable'],
+                        [/function/, 'function'],
+                        [/variabel/i, 'variable'],
+                        [/position/i, 'number'],
+                        [/funktion/i, 'function']
+                    ]
+                }
+            });
+            
+            // Register textscratch's language configuration (brackets, comments, etc.)
+            monaco.languages.setLanguageConfiguration('textscratch', {
+                comments: {
+                    lineComment: /#|;/ // Single-line comments
+                },
+                brackets: [['[', ']']],
+                autoClosingPairs: [
+                    { open: '[', close: ']' }
+                ]
+            });
+
+
+            monaco.languages.registerCompletionItemProvider('textscratch', {
+                provideCompletionItems: function(model, position) {
+                    const wordUntilPosition = model.getWordUntilPosition(position);
+                    const word = wordUntilPosition.word;
+
+                    const suggestions = [
+                        {
+                            label: 'isz',
+                            kind: monaco.languages.CompletionItemKind.Keyword,
+                            insertText: 'isz',
+                            documentation: {
+                                value: 'Instruction for increment and skip zero'
+                            }
+                        },
+                        {
+                            label: 'jmp',
+                            kind: monaco.languages.CompletionItemKind.Keyword,
+                            insertText: 'jmp',
+                            documentation: {
+                                value: 'Jump to a specified line'
+                            }
+                        },
+                        {
+                            label: 'dec',
+                            kind: monaco.languages.CompletionItemKind.Keyword,
+                            insertText: 'dec',
+                            documentation: {
+                                value: 'Decrement the value'
+                            }
+                        },
+                        {
+                            label: 'inc',
+                            kind: monaco.languages.CompletionItemKind.Keyword,
+                            insertText: 'inc',
+                            documentation: {
+                                value: 'Increment the value'
+                            }
+                        },
+                        {
+                            label: 'stp',
+                            kind: monaco.languages.CompletionItemKind.Keyword,
+                            insertText: 'stp',
+                            documentation: {
+                                value: 'Stop execution'
+                            }
+                        }
+                    ];
+
+                    // Filter suggestions based on the current word
+                    return {
+                        suggestions: suggestions.filter(item => item.label.startsWith(word))
+                    };
+                }
+            });
+
+            monaco.languages.registerHoverProvider('textscratch', {
+                provideHover: function(model, position) {
+                    // Get the word at the current position
+                    const word = model.getWordAtPosition(position);
+
+                    if (!word || !word.word.match(/^isz|jmp|dec|inc|stp$/) || syntaxHighlighting == false) {
+                        return null;
+                    }
+
+                    // Return the hover information
+                    return {
+                        contents: [
+                            { value: `
+    ${languageDir.commandUsage[word.word]}` }, // Markdown or plain text
+                            languageDir.commandDocs[word.word]
+                        ]
+                    };
+                }
+            });
+            var resetValue = [
+                    'jmp 3',
+                    'inc A',
+                    'dec B',
+                    "isz B",
+                    "jmp 1",
+                    "stp"
+                ];
+            var modelStart;
+            modelStart = resetValue;
+            // Create the Monaco Editor instance
+            const editor = monaco.editor.create(document.getElementById("container"), {
+                value: modelStart.join('\n'),
+                language: 'textscratch',
+                lineNumbersMinChars: 3, // Optional: Adjust width of line number gutter
+                theme: 'textscratch-dark',
+                fontSize: 16
+            });
+
+            // Function to perform validation and set markers
+            function validate() {
+                const model = editor.getModel();
+                const text = model.getValue();
+                const lines = text.split('\n');
+                const markers = [];
+                errors = 0;
+                warnings = 0;
+                localStorage.setItem("recent", text)
+                lines.forEach((line, index) => {
+                    // Check for 'jmp' followed by non-numeric
+                    var lineOffset = 0
+                    editor.getModel().getValue().split("\n").forEach((line1, index1) => {
+                        if (index1 < index) {
+                            if (line1.slice(0, 1) == "#") {
+                                lineOffset += 1;
+                            }
+                            if (line1.slice(0, 1) == " ") {
+                                lineOffset += 1;
+                            }
+                            if (line1.slice(0, 1) == "") {
+                                lineOffset += 1;
+                            }
+                        }
+                    });
+                    const matches = {
+                        "commandUnknown": (!line.match(/^((isz|jmp|dec|inc)\s+)|(stp$)/) && line.replace(" ", "") != "" && !line.match(/^#|;/)) && !line.match(/^stp\s*$/),
+                        "jmpIncorrect": line.match(/^jmp\s+\d*\D+\d*$/) || line.match(/^jmp\s\D+\d+\D+$/),
+                        "jmpDecIncIszMissing": line.match(/^(jmp|dec|inc|isz)\s*$/),
+                        "stpExtra": line.slice(4) != "" && !(line.slice(4).replace(" ", "") != "") && line.match(/^stp\s+/) && !line.match(/^stp\s\s$/),
+                        "jmpRange": lines.length - lineOffset <= parseInt(line.slice(4)),
+                        "jmpLoop": index - lineOffset == parseInt(line.slice(4)),
+                        "decIncIszIncorrect": line.match(/^(dec|inc|isz)\s+[A-Z]*[^A-Z]+[A-Z]*$/) || line.match(/^(dec|inc|isz)\s[^A-Z]+[A-Z]+[^A-Z]+$/)
+                    };
+                    if (matches["jmpDecIncIszMissing"]) {
+                        errors += 1;
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Error,
+                            message: languageDir[line.slice(0, 3) + "Missing"],
+                            startLineNumber: index + 1,
+                            startColumn: 1,
+                            endLineNumber: index + 1,
+                            endColumn: 4
+                        });
+                    } else if (matches["jmpIncorrect"]) {
+                        errors += 1;
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Error,
+                            message: languageDir["jmpIncorrect"],
+                            startLineNumber: index + 1,
+                            startColumn: 5,
+                            endLineNumber: index + 1,
+                            endColumn: line.length + 1
+                        });
+                    } else if (matches["decIncIszIncorrect"]) {
+                        errors += 1;
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Error,
+                            message: languageDir[line.slice(0, 3) + "Incorrect"],
+                            startLineNumber: index + 1,
+                            startColumn: 5,
+                            endLineNumber: index + 1,
+                            endColumn: line.length + 1
+                        });
+                    } else if (matches["jmpRange"]) {
+                        warnings += 1;
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Warning,
+                            message: languageDir["jmpRange"],
+                            startLineNumber: index + 1,
+                            startColumn: 5,
+                            endLineNumber: index + 1,
+                            endColumn: line.length + 1
+                        });
+                    } else if (matches["jmpLoop"]) {
+                        warnings += 1;
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Warning,
+                            message: languageDir["jmpLoop"],
+                            startLineNumber: index + 1,
+                            startColumn: 1,
+                            endLineNumber: index + 1,
+                            endColumn: line.length + 1
+                        });
+                    } else if (matches["stpExtra"]) {
+                        errors += 1;
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Error,
+                            message: languageDir["stpExtra"],
+                            startLineNumber: index + 1,
+                            startColumn: 5,
+                            endLineNumber: index + 1,
+                            endColumn: line.length + 1
+                        });
+                    } else if (matches["commandUnknown"]) {
+                        warnings += 1;
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Warning,
+                            message: languageDir["commandUnknown"],
+                            startLineNumber: index + 1,
+                            startColumn: 1,
+                            endLineNumber: index + 1,
+                            endColumn: line.length + 1
+                        });
+                    }
+                });
+
+                // Set markers to show errors
+                monaco.editor.setModelMarkers(model, 'owner', markers);
+            }
+
+            // var codeActionCount = 0
+
+            // monaco.languages.registerCodeActionProvider('textscratch', {
+            //     provideCodeActions: function(model, range, context, token) {
+            //         const actions = [];
+
+            //         // Check if there's an error in the range that matches 'jmp' error
+                    
+            //         context.markers.forEach(marker => {
+            //             codeActionCount += 1
+            //             if (marker.message === languageDir["commandUnknown"]) {
+            //                 actions.push({
+            //                     title: 'Replace with "jmp 0"',
+            //                     kind: 'quickfix',
+            //                     edit: {
+            //                         edits: {
+            //                             resource: editor.getModel().uri,
+            //                             textEdit: {
+            //                                 range: new monaco.Range(marker.startLineNumber, marker.startColumn, marker.endLineNumber, marker.endColumn),
+            //                                 text: String(marker.startLineNumber)
+            //                             },
+            //                             versionId: codeActionCount
+            //                         }
+            //                     },
+            //                     isPreferred: true
+            //                 });
+            //             } else if (marker.message === languageDir["jmpIncorrect"]) {
+            //                 actions.push({
+            //                     title: `Replace with "jmp ${marker.startLineNumber}"`,
+            //                     kind: 'quickfix',
+            //                     edit: {
+            //                         resource: editor.getModel().uri,
+            //                         textEdit: {
+            //                             range: new monaco.Range(marker.startLineNumber, marker.startColumn, marker.endLineNumber, marker.endColumn),
+            //                             text: String(marker.startLineNumber)
+            //                         },
+            //                         versionId: codeActionCount
+            //                     },
+            //                     isPreferred: true
+            //                 });
+            //             }
+            //         });
+
+            //         return { actions, dispose: () => {} };
+            //     }
+            // });
+            // Attach validation function to editor changes
+            editor.getModel().onDidChangeContent(() => validate());
+            // Initial validation
+            validate();
+            // Function to resize the editor
+            function resizeEditor() {
+                editor.layout();
+            }
+
+
+            // Add event listener for window resize
+            window.addEventListener('resize', resizeEditor);
+
+            // Initial resize to make sure editor fills the window on load
+            resizeEditor();
+        });
+    </script>
     <script>
         async function loadImage(url) {
             const response = await fetch(url);
