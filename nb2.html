@@ -993,7 +993,7 @@
                 }
             });
             var resetValue = [
-                    'event.flagClicked',
+                    'event.flagClicked,',
                     'control.wait(10);'
                 ];
             var modelStart;
@@ -1233,7 +1233,7 @@
                 let textBlocks = []
                 textGroups.forEach((line, index) => {
                     if (line != "") {
-                        textBlocks.push(line.split(","))
+                        textBlocks.push(line.split(/,$/))
                     }
                 });
                 console.log("Blocks:")
@@ -1258,27 +1258,56 @@
                         let blockType = block.slicer(".", 1).split("{")[0].split("(")[0];
                         let blockAttributes;
                         if (block.slicer(".", 1).split("(")[1] != undefined) {
-                            blockAttributes = block.slicer(".", 1).split("(")[1].split(")")[0];
+                            blockAttributes = block.slicer(".", 1).split("(")[1].split(")")[0].split(",");
                         }
+                        blockAttributes.forEach((element, index) => {
+                            if (element.match(/[\/\*\+\-]+/)) {
+                                
+        //                         {
+        //     "opcode": "operator_divide",
+        //     "next": null,
+        //     "parent": "Wait1",
+        //     "inputs": {
+        //       "NUM1": [
+        //         1,
+        //         [
+        //           4,
+        //           "3"
+        //         ]
+        //       ],
+        //       "NUM2": [
+        //         1,
+        //         [
+        //           4,
+        //           "2"
+        //         ]
+        //       ]
+        //     },
+        //     "fields": {},
+        //     "shadow": false,
+        //     "topLevel": false
+        //   }
+                            }
+                        });
                         switch(blockCategory) {
                             case "motion":
                                 switch(blockType) {
-                                    case "turnRight": blockOpcode = "motion_turnright"; blockInput = {"DEGREES": [1, [4, blockAttributes.replaceAll('"', "")]]}; break;
-                                    case "turnLeft": blockOpcode = "motion_turnleft"; blockInput = {"DEGREES": [1, [4, blockAttributes.replaceAll('"', "")]]}; break;
-                                    case "position": blockOpcode = "motion_gotoxy"; blockInput = {"X": [1, [4, blockAttributes.split("/")[0]]],"Y": [1, [4, blockAttributes.split("/")[1]]]}; break;
+                                    case "turnRight": blockOpcode = "motion_turnright"; blockInput = {"DEGREES": [1, [4, blockAttributes[0].replaceAll('"', "")]]}; break;
+                                    case "turnLeft": blockOpcode = "motion_turnleft"; blockInput = {"DEGREES": [1, [4, blockAttributes[0].replaceAll('"', "")]]}; break;
+                                    case "position": blockOpcode = "motion_gotoxy"; blockInput = {"X": [1, [4, blockAttributes[0]]],"Y": [1, [4, blockAttributes[1]]]}; break;
                                 }
                                 break;
                             case "event":
                                 switch(blockType) {
                                     case "flagClicked": blockOpcode = "event_whenflagclicked"; break;
                                     case "spriteClicked": blockOpcode = "event_whenthisspriteclicked"; break;
-                                    case "keyPressed": blockOpcode = "event_whenkeypressed"; blockField = {"KEY_OPTION": [`${blockAttributes.replaceAll('"', "")}`, null]}; break;
+                                    case "keyPressed": blockOpcode = "event_whenkeypressed"; blockField = {"KEY_OPTION": [`${blockAttributes[0].replaceAll('"', "")}`, null]}; break;
                                 }
                                 break;
                             case "control":
                                 switch(blockType) {
                                     // case "wait": blockOpcode = "control_wait"; blockInput = {"DURATION": [1, [5, `${block.split(".")[1].split("(").splice(1).join("").replace(")", "")}`]]}; break;
-                                    case "wait": blockOpcode = "control_wait"; blockInput = {"DURATION": [1, [5, `${blockAttributes}`]]}; break;
+                                    case "wait": blockOpcode = "control_wait"; blockInput = {"DURATION": [1, [5, `${blockAttributes[0]}`]]}; break;
                                 }
                                 break;
                         }
