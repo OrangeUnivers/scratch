@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TextScratch Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&amp;family=Roboto+Mono:ital,wght@0,100..700;1,100..700&amp;family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.40.0/min/vs/editor/editor.main.css">
+    <script src="https://kit.fontawesome.com/87b26c3ff4.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        /* Make the body and html elements take up the full height */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling */
+            background-color: #1e1e1e;
+        }
+        /* Style the container to add space at the top and fill the remaining viewport */
+        #container {
+            position: fixed;
+            width: 100%;
+            height: calc(100% - 50px); /* Adjust height to account for top space */
+            top: 50px;
+        }
+        .navbar {
+            background-color: #1e1e1e;
+            width: 100%;
+            height: 50px;
+            margin-bottom: calc(100% - 50px);
+            z-index: 10;
+            position: fixed; 
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .navbar a {
+            background-color: #2a2d2e;
+            color: #858585;
+            text-align: center;
+            text-decoration: none;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            margin-top: 4px;
+            margin-bottom: 4px;
+            margin-left: 2px;
+            margin-right: 2px;
+            height: calc(100% - 8px);
+            padding-left: 10px;
+            padding-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-family: Fira Code, Consolas, 'Courier New', monospace;
+            cursor: pointer;
+        }
+        .navbar a:hover {
+            color: #c6c6c6;
+            font-weight: 500;
+        }
+        .navbar .dangerous i {
+            margin-right: 8px;
+        }
+        .navbar .dangerous:hover {
+            background-color: #423636 !important;
+            color: #ff9681 !important;
+            font-weight: 500
+        }
+        .navbar h1 {
+            font-family: Fira Code, Consolas, 'Courier New', monospace;
+            color: #c6c6c6;
+            font-weight: 600;
+            margin: 10px;
+        }
+        .copyMessage {
+            pointer-events: none;
+            height: 80px;
+            bottom: 0;
+            position: fixed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            width: 100%;
+            transition: transform 0.5s ease-in-out; /* Transition for smooth movement */
+            transform: translateY(80px); /* Initial position */
+        }
+
+        .cm {
+            display: flex;
+            align-items: center;        /* Center items vertically within the container */
+            justify-content: space-between; /* Space between text and icon */
+            background-color: #2a2d2e;
+            padding-left: 20px;
+            padding-right: 20px;
+            height: 55px;
+            border-radius: 15px;
+            width: auto; /* Ensures the width adjusts to content */
+        }
+
+        .cm p {
+            font-weight: 500;
+            font-family: Nunito;
+            color: #c6c6c6;
+            margin: 0; /* Remove default margin */
+        }
+
+        .cm i {
+            font-size: 24px; /* Adjust icon size as needed */
+        }
+
+        .checkmark {
+            color: #5ce65c;
+        }
+
+        .xmark {
+            color: #cd1c18;
+        }
+
+        .question {
+            color: #c6c6c6;
+        }
+        .warningAlert {
+            pointer-events: all;
+            position: fixed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out; /* Transition for smooth movement */
+            background-color: #00000069;
+            height: 100%;
+            width: 100%;
+        }
+
+        .wa {
+            position: fixed;
+            background-color: #2a2d2e;
+            padding-left: 25px;
+            padding-right: 20px;
+            height: auto;
+            /* max-width: 90%; */
+            border-radius: 25px;
+            width: auto; /* Ensures the width adjusts to content */
+        }
+
+        .wa h3 {
+            line-height: 0px;
+            font-weight: 700;
+            font-family: Nunito;
+            color: #c6c6c6;
+            margin-right: 25px;
+            font-size: 50px;
+        }
+
+        .wa p {
+            line-height: 15px;
+            /* font-weight: 500; */
+            font-family: Nunito;
+            color: #c6c6c6;
+            margin-right: 25px;
+            font-size: 25px;
+        }
+/* 
+        .wa i {
+            position: absolute;
+            top: 15px;
+            right: 18px;
+            font-size: 24px;
+            color: #858585;
+            cursor: pointer;
+            transition: color 0.2s ease-in-out;
+        }
+
+        .wa i:hover {
+            color: #c6c6c6;
+        } */
+        .wa #wa-btn {
+            background-color: #3e4446;
+            color: #858585;
+            text-align: center;
+            text-decoration: none;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            margin-bottom: 16px;
+            margin-left: 4px;
+            margin-right: 4px;
+            height: calc(100% - 8px);
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            font-family: Fira Code, Consolas, 'Courier New', monospace;
+            cursor: pointer;
+        }
+        .wa #wa-btn:hover {
+            background-color: #3e4446;
+            color: #c6c6c6;
+            font-weight: 500;
+        }
+        .wa #wa-btn-error {
+            background-color: #463e3e;
+            color: #ffa896;
+            text-align: center;
+            text-decoration: none;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            margin-bottom: 16px;
+            margin-left: 4px;
+            margin-right: 4px;
+            height: calc(100% - 8px);
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            font-family: Fira Code, Consolas, 'Courier New', monospace;
+            cursor: pointer;
+        }
+        .wa #wa-btn-error:hover {
+            background-color: #423636;
+            color: #ff9681;
+            font-weight: 500;
+        }
+        .settings {
+            pointer-events: all;
+            position: fixed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out; /* Transition for smooth movement */
+            background-color: #00000069;
+            height: 100%;
+            width: 100%;
+        }
+
+        .st {
+            min-width: 500px;
+            position: fixed;
+            background-color: #2a2d2e;
+            padding-left: 25px;
+            padding-right: 20px;
+            height: auto;
+            /* max-width: 90%; */
+            border-radius: 25px;
+            width: auto; /* Ensures the width adjusts to content */
+        }
+
+        .st h4 {
+            line-height: 0px;
+            font-weight: 500;
+            font-family: Nunito;
+            color: #c6c6c6;
+            margin-right: 25px;
+            font-size: 35px;
+            margin-bottom: 30px;
+        }
+
+        .st h3 {
+            line-height: 0px;
+            font-weight: 700;
+            font-family: Nunito;
+            color: #c6c6c6;
+            margin-right: 25px;
+            font-size: 50px;
+        }
+
+        .st p {
+            line-height: 15px;
+            font-size: 15px !important;
+            /* font-weight: 500; */
+            font-family: Fira Code, Consolas, 'Courier New', monospace;
+            color: #3e4446;
+            margin-right: 25px;
+            font-size: 25px;
+        }
+
+        .corner i {
+            position: absolute;
+            top: 15px; /* Distance from the top edge */
+            right: 18px; /* Distance from the right edge */
+            font-size: 24px; /* Adjust size as needed */
+            color: #858585; /* Red color for the xmark */
+            cursor: pointer; /* Indicate it's clickable */
+            transition: color 0.2s ease-in-out; /* Transition for smooth movement */
+        }
+
+        .corner i:hover {
+            color: #c6c6c6; /* Red color for the xmark */
+        }
+        .st label {
+            font-family: Fira Code, Consolas, 'Courier New', monospace;
+            font-size: 18px;
+            margin-right: 10px;
+            display: inline-block;
+            cursor: pointer;
+            color: #858585;
+            transition: color 0.2s ease-in-out; /* Transition for smooth movement */
+            background-color: #3e4446;
+            padding: 10px;
+            padding-right: 20px;
+            border-radius: 10px;
+        }
+        .st label:hover {
+            color: #c6c6c6;
+        }
+
+        .st input[type="radio"] {
+            margin-right: 0px;
+        }
+
+        .st input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        .st #st-btn-apply {
+            background-color: #3e4446;
+            color: #858585;
+            text-align: center;
+            text-decoration: none;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            margin-bottom: 16px;
+            margin-left: 4px;
+            margin-right: 4px;
+            height: calc(100% - 8px);
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            font-family: Fira Code, Consolas, 'Courier New', monospace;
+            cursor: pointer;
+        }
+        .st #st-btn-apply:hover {
+            background-color: #3e4446;
+            color: #c6c6c6;
+            font-weight: 500;
+        }
+        .st #st-btn-discard {
+            background-color: #463e3e;
+            color: #ffa896;
+            text-align: center;
+            text-decoration: none;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            margin-bottom: 16px;
+            margin-left: 4px;
+            margin-right: 4px;
+            height: calc(100% - 8px);
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            font-family: Fira Code, Consolas, 'Courier New', monospace;
+            cursor: pointer;
+        }
+        .st #st-btn-discard:hover {
+            background-color: #423636;
+            color: #ff9681;
+            font-weight: 500;
+        }
+        .st i {
+            font-size: 20px;
+            /* display: inline-block; */
+            cursor: pointer;
+            color: #858585;
+            transition: color 0.2s ease-in-out; /* Transition for smooth movement */
+            margin: 0;
+            padding: 0;
+        }
+        .st i:hover {
+            color: #c6c6c6;
+        }
+        /* Style for the question mark icon */
+        .help {
+            display: inline-block;
+            font-weight: 400;
+            font-size: 14px;
+            cursor: pointer;
+            color: #555;
+            position: relative;
+        }
+
+        /* Tooltip container */
+        .tooltip {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            font-family: Nunito;
+            color: #c6c6c6;
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Position above the question mark */
+            left: 50%;
+            margin-left: -100px; /* Centers the tooltip */
+            opacity: 0;
+            transition: opacity 0.3s;
+            transform: translateX(-10px)
+        }
+
+        /* Tooltip arrow */
+        .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 100%; /* At the bottom of the tooltip */
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        /* Show tooltip on hover */
+        .help:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+        #blur {
+            transition: filter 0.5s ease;
+        }
+        .resetOverlay {
+            background-color: #1e1e1e;
+            transition: opacity 0.3s ease;
+            pointer-events: all;
+            position: fixed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 15;
+            visibility: hidden;
+            opacity: 0;
+            height: 100vh;
+            width: 100%;
+        }
+        .resetOverlay i {
+            color: #858585;
+            font-size: 250px;
+            transition: opacity 1s ease, margin 3s ease;
+        }
+        .resetOverlay .model {
+            height: 408px;
+            width: 749px;
+            background-color: #2a2d2e;
+            border-radius: 10px;
+            margin-top: 450px;
+            opacity: 0;
+            position: fixed;
+            transition: opacity 0.8s ease;
+            font-size: 24px;
+            font-family: Fira Code, Consolas, 'Courier New', monospace;
+            padding-right: 10px;
+            padding-left: 10px;
+            padding-top: 6px;
+            padding-bottom: 6px;
+            color: #c6c6c6;
+            white-space: pre;
+            pointer-events: none;
+        }
+        .resetOverlay p {
+            position: fixed;
+            font-size: 24px;
+            font-family: Nunito;
+            color: #c6c6c6;
+            font-weight: 500;
+            margin-bottom: 50px;
+            transition: opacity 0.8s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .resetOverlay a {
+            background-color: #463e3e;
+            color: #ffa896;
+            text-align: center;
+            text-decoration: none;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            margin-bottom: 16px;
+            margin-left: 4px;
+            margin-right: 4px;
+            height: min-content;
+            width: min-content;
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            font-family: Fira Code, Consolas, 'Courier New', monospace;
+            cursor: pointer;
+            margin-top: 885px;
+            transition: opacity 0.8s ease;
+            visibility: hidden;
+            opacity: 0;
+            z-index: 17;
+        }
+        .resetOverlay a:hover {
+            background-color: #423636;
+            color: #ff9681;
+            font-weight: 500;
+        }
+    </style>
+</head> 
+<body>
+    <div id="rs" class="resetOverlay">
+        <i id="rs-spinner" class="fa-solid fa-rotate fa-spin fa-2xl" style="opacity: 0; position: fixed;"></i>
+        <div id="rs-model" class="model">
+            Why you here 🤨
+        </div>
+        <p id="rs-erease">Ereasing Code...</p>
+        <p id="rs-replace">Replacing Code...</p>
+        <p id="rs-complete" style="margin-bottom: 0px; margin-top: 360px;">Code Reset Successfully!</p>
+        <!-- <p id="rs-complete" style="margin-bottom: 0px; margin-top: 0px; opacity: 1;">Code Compleasd!</p> -->
+        <a id="rs-cancel">Cancel</a>
+    </div>
+    <div id="blur">
+        <div id="cm" class="copyMessage">
+            <div class="cm">
+                <i id="cm-icon" class="fa-regular fa-circle-question question"></i>
+                <p>​ ​ ​</p>
+                <p id="cm-message">You didn't copy something yet 🤨</p>
+            </div>
+        </div>
+        <div class="navbar" id="navbar">
+            <h1 id="title">TextScratch Editor</h1>
+            <a id="btn-export" title="Copy the code in correct form (recommended)"><i class="fa-solid fa-fw fa-file-export fa-sm" style="margin-right: 6px;"></i>Export</a>
+            <a id="btn-website" href="https://scratch.mit.edu/" target="_blank" rel="noopener noreferrer" title="Open textscratch-Assembler"><i class="fa-solid fa-fw fa-code-branch fa-sm" style="margin-right: 6px;"></i>Open&nbsp;Scratch</a>
+            <a id="btn-reset" title="Go back to how it was in the start" class="dangerous"><i class="fa-regular fa-fw fa-trash-can fa-sm"></i>Reset</a>
+        </div>
+        <div style="background: linear-gradient(to bottom, rgb(16, 16, 16) 0%, rgba(16, 16, 16, 0) 100%); width: 100%; height: 5px; margin-top: 50px; margin-bottom: calc(100% - 55px); z-index: 9; position: fixed; opacity: 0.5;"></div>
+
+        <div id="container"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.40.0/min/vs/loader.js"></script>
+    <script src="normal.js"></script>
+    <script>
+        var downloadit = true;
+        if (window.location.host.split(":")[0] == "127.0.0.1") {
+            downloadit = false;
+        }
+        async function loadImage(url) {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Uint8Array(await blob.arrayBuffer());
+        }
+        let lastCode = localStorage.getItem("tsb3-recent");
+        console.log(lastCode)
+        if (lastCode == "undefined" || lastCode == null || lastCode == undefined) {
+            lastCode = undefined;
+        }
+        let currentLanguage = localStorage.getItem("tsb3-lang");
+        if (currentLanguage == "undefined" || currentLanguage == null || currentLanguage == undefined) {
+            currentLanguage = "GER";
+            localStorage.setItem("tsb3-lang", "GER");
+        }
+        var errors = 0
+        var warnings = 0
+        const languageLang = {
+            "GER": { 
+                "commandUnknown": 'Unbekannter Operator.',
+                "jmpIncorrect": `Inkorrektes Argument: "jmp" muss mit einer Nummer geführt werden.`,
+                "jmpMissing": `Fehlendes Argument: "jmp" muss mit einer Nummer geführt werden.`,
+                "decMissing": `Fehlendes Argument: "dec" muss mit einer Variabel geführt werden.`,
+                "incMissing": `Fehlendes Argument: "inc" muss mit einer Variabel geführt werden.`,
+                "iszMissing": `Fehlendes Argument: "isz" muss mit einer Variabel geführt werden.`,
+                "jmpRange": 'Inkorrektes Argument: "jmp" springt ausserhalb des Codes.',
+                "jmpLoop": 'Unendliche Schleife: "jmp" springt auf sich selber.',
+                "decIncorrect": `Inkorrektes Argument: "dec" muss mit einer Variabel geführt werden.`,
+                "incIncorrect": `Inkorrektes Argument: "inc" muss mit einer Variabel geführt werden.`,
+                "iszIncorrect": `Inkorrektes Argument: "isz" muss mit einer Variabel geführt werden.`,
+                "stpExtra": `Überflüssiges Argument: "stp" hat keine Argumente.`,
+                commandDocs: {
+                    "isz": { value: `\`isz\` oder "is zero", sprint zur übernächste Linie wenn die Variabel dannach null ist und nur zur nächsten wenn nicht.` },
+                    "jmp": { value: `\`jmp\` oder "jump", springt zur specifizierten Line hin.` },
+                    "dec": { value: `\`dec\` oder "decrease", subtrahiert Variabel dannach um eins.` },
+                    "inc": { value: `\`inc\` oder "increase", addiert Variabel dannach um eins.` },
+                    "stp": { value: `\`stp\` oder "stop", stoppt das Programm.` }
+                },
+                commandUsage: {
+                    "isz": `(funktion) isz variabel`,
+                    "jmp": `(funktion) jmp position`,
+                    "dec": `(funktion) dec variabel`,
+                    "inc": `(funktion) inc variabel`,
+                    "stp": `(funktion) isz`
+                },
+                gui: {
+                    "title": "textscratch-Computer Script Editor",
+                    "btnCopy": "Code&nbsp;kopieren",
+                    "btnWebsite": "Website&nbsp;öffnen",
+                    "btnSettings": "Einstellungen",
+                    "btnCopyTitle": "Code in richtiger Formatierung kopieren (empfohlen)",
+                    "btnWebsiteTitle": "Den textscratch-Assembler öffnen",
+                    "btnSettingsTitle": "Websiteeinstellungen",
+                    "cmSuccess": "Code erfolgreich kopiert!",
+                    "cmFail": "Code kopieren fehlgeschlagen!",
+                    "cmSecret": "Du hast nochnichts kopiert 🤨",
+                    warningAlert: {
+                        "title": "Dein Code hat Fehler!",
+                        "messageProbably": "Dein Code wird warscheinlich beim ausführen fehlschlagen!",
+                        "messageDefinitely": "Dein Code wird beim ausführen fehlschlagen!",
+                        "list": "Dein Code hat momentan die folgenden Probleme:",
+                        "problemError": "Fehler",
+                        "problemWarning": "Wahrnung",
+                        "problemErrorPlural": "Fehler",
+                        "problemWarningPlural": "Wahrnungen",
+                        "and": "und",
+                        "btnCopy": "Trotzdem kopieren",
+                        "btnCancel": "Abbrechen"
+                    },
+                    settings: {
+                        "title": "Einstellungen",
+                        "languages": "Sprachen:",
+                        "editor": "Editor:",
+                        "showSyntax": "Syntax anzeigen",
+                        "showSyntaxDoc": "Falls aktiviert wird die Syntax Documentaton über Funktionen beim darüberschweben angezeigt.",
+                        "stopCopy": "Stop kopieren wenn Fehler auftreten",
+                        "stopCopyDoc": "Fall jene Fehler gefunden werden wirst du gestoppt vom kopieren.",
+                        "isBeta": "Beta version benutzten",
+                        "isBetaDoc": "Benutzt neue Beta version (Achtung: Ist sehr unstabil). Ein Neustart ist erforderlich.",
+                        "btnDiscard": "Rückgängig",
+                        "btnApply": "Anwenden"
+                    }
+                }
+            },
+            "ENG": { 
+                "commandUnknown": 'Unknown command.',
+                "jmpIncorrect": `Invalid syntax: "jmp" must be followed by a number.`,
+                "jmpMissing": `Missing syntax: "jmp" must be followed by a number.`,
+                "decMissing": `Missing syntax: "dec" must be followed by a variable.`,
+                "incMissing": `Missing syntax: "inc" must be followed by a variable.`,
+                "iszMissing": `Missing syntax: "isz" must be followed by a variable.`,
+                "jmpRange": 'Invalid syntax: "jmp" syntax is out of range.',
+                "jmpLoop": 'Infinite loop: "jmp" will loop infinitly.',
+                "decIncorrect": `Invalid syntax: "dec" must be followed by an variable.`,
+                "incIncorrect": `Invalid syntax: "inc" must be followed by an variable.`,
+                "iszIncorrect": `Invalid syntax: "isz" must be followed by an variable.`,
+                "stpExtra": `Extra call in syntax: "stp" doesn't have an other argument.`,
+                commandDocs: {
+                    "isz": { value: `\`isz\` or "is zero", jumps two lines infront if variable is zero and jumps to next line instead if it isn't.` },
+                    "jmp": { value: `\`jmp\` or "jump", goes to specified line number next.` },
+                    "dec": { value: `\`dec\` or "decrease", decreases variable by one.` },
+                    "inc": { value: `\`inc\` or "increase", increases variable by one.` },
+                    "stp": { value: `\`stp\` or "stop", stops the program.` }
+                },
+                commandUsage: {
+                    "isz": `(function) isz variable`,
+                    "jmp": `(function) jmp position`,
+                    "dec": `(function) dec variable`,
+                    "inc": `(function) inc variable`,
+                    "stp": `(function) isz`
+                },
+                gui: {
+                    "title": "Papercomputer Script Editor",
+                    "btnCopy": "Copy&nbsp;Code",
+                    "btnWebsite": "Open&nbsp;Website",
+                    "btnSettings": "Settings",
+                    "btnCopyTitle": "Copy the code in correct form (recommended)",
+                    "btnWebsiteTitle": "Open textscratch-Assembler",
+                    "btnSettingsTitle": "View settings",
+                    "cmSuccess": "Successfully copied code!",
+                    "cmFail": "Failed to copy code",
+                    "cmSecret": "You didn't copy something yet 🤨",
+                    warningAlert: {
+                        "title": "Your Code has Errors!",
+                        "messageProbably": "Your Code will probably not work correctly when used in website!",
+                        "messageDefinitely": "Your Code will not work correctly when used in website!",
+                        "list": "Your Codes problems are the following:",
+                        "problemError": "Error",
+                        "problemWarning": "Warning",
+                        "problemErrorPlural": "Errors",
+                        "problemWarningPlural": "Warnings",
+                        "and": "and",
+                        "btnCopy": "Copy anyway",
+                        "btnCancel": "Cancel"
+                    },
+                    settings: {
+                        "title": "Settings",
+                        "languages": "Languages:",
+                        "editor": "Editor:",
+                        "showSyntax": "Show syntax",
+                        "showSyntaxDoc": "If enabled it will show syntax documentation if hovering over function.",
+                        "stopCopy": "Stop copying if errors",
+                        "stopCopyDoc": "If any errors are found while copying, it will stop you from copying the code.",
+                        "isBeta": "Use beta version",
+                        "isBetaDoc": "Uses the new beta version (Its prone to break and is not safe). Restart required.",
+                        "btnDiscard": "Discard",
+                        "btnApply": "Apply"
+                    }
+                }
+            }
+        };
+        var incorrectVar = ""
+        var languageDir = languageLang[currentLanguage];
+        // function slicer(separator = "", ) {
+        //     "d".split("")
+        // }
+        String.prototype.slicer = function(separator, start = 0, end = null) {
+            var list1 = this.split(separator);
+            if (end == null) {
+                end = this.length - 1
+            }
+            var list2 = [];
+            list1.forEach((element, index) => {
+                if (index >= start && index <= end) {
+                    list2.push(element)
+                }
+            })
+            return list2.join(separator);
+        };
+        function removeSpacesOutsideQuotes(text) {
+            return text.replace(/(".*?"|[^"]+)/g, function(match) {
+                if (match.startsWith('"')) {
+                    return match;
+                } else {
+                    return match.replace(/\s+/g, '');
+                }
+            });
+        }
+        function generateRandomString(length) {
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                const randomIndex = Math.floor(Math.random() * characters.length);
+                result += characters[randomIndex];
+            }
+            return result;
+        }
+        function changeLang(lang) {
+            languageDir = languageLang[lang];
+            currentLanguage = lang
+            localStorage.setItem("tsb3-lang", lang);
+            // translateLang()
+        }
+        function translateLang() {
+            var documentTitle = document.getElementById("title");
+            var buttonExport = document.getElementById("btn-export");
+            var buttonWebsite = document.getElementById("btn-website");
+            var buttonSettings = document.getElementById("btn-settings");
+            var copyMessage = document.getElementById("cm-message");
+            var languageEnglish = document.getElementById("st-lg-english");
+            var languageGerman = document.getElementById("st-lg-german");
+            var editorSyntax = document.getElementById("st-ed-syntax");
+            var editorSyntaxLabel = document.getElementById("st-ed-syntax-label");
+            var editorReminderLabel = document.getElementById("st-ed-reminder-label");
+            var editorBetaLabel = document.getElementById("st-ed-beta-label");
+            var settingsTitle = document.getElementById("st-title");
+            var settingsLanguage = document.getElementById("st-tl-language");
+            var settingsEditor = document.getElementById("st-tl-editor");
+            var editorSyntaxTooltip = document.getElementById("st-ed-syntax-q");
+            var editorReminderTooltip = document.getElementById("st-ed-reminder-q");
+            var editorBetaTooltip = document.getElementById("st-ed-beta-q");
+            var settingsDiscard = document.getElementById("st-btn-discard");
+            var settingsApply = document.getElementById("st-btn-apply");
+            documentTitle.textContent = languageDir.gui["title"];
+            buttonExport.innerHTML = `<i class="fa-solid fa-fw fa-file-export fa-sm" style="margin-right: 6px;"></i>` + languageDir.gui["btnCopy"];
+            buttonWebsite.innerHTML = `<i class="fa-solid fa-fw fa-code-branch fa-sm" style="margin-right: 6px;"></i>` + languageDir.gui["btnWebsite"];
+            buttonSettings.innerHTML = `<i class="fa-solid fa-fw fa-gear fa-sm" style="margin-right: 6px;"></i>` + languageDir.gui["btnSettings"];
+            copyMessage.innerHTML = languageDir.gui["cmSecret"];
+            buttonExport.title = languageDir.gui["btnCopyTitle"];
+            buttonWebsite.title = languageDir.gui["btnWebsiteTitle"];
+            buttonSettings.title = languageDir.gui["btnSettingsTitle"];
+            settingsTitle.textContent = languageDir.gui.settings["title"];
+            settingsLanguage.textContent = languageDir.gui.settings["languages"];
+            settingsEditor.textContent = languageDir.gui.settings["editor"];
+            editorSyntaxLabel.textContent = languageDir.gui.settings["showSyntax"];
+            editorSyntaxTooltip.textContent = languageDir.gui.settings["showSyntaxDoc"];
+            editorReminderLabel.textContent = languageDir.gui.settings["stopCopy"];
+            editorReminderTooltip.textContent = languageDir.gui.settings["stopCopyDoc"];
+            editorBetaLabel.textContent = languageDir.gui.settings["isBeta"];
+            editorBetaTooltip.textContent = languageDir.gui.settings["isBetaDoc"];
+            settingsDiscard.textContent = languageDir.gui.settings["btnDiscard"];
+            settingsApply.textContent = languageDir.gui.settings["btnApply"];
+        }
+        // translateLang()
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.40.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            monaco.editor.defineTheme('textscratch-dark', {
+                base: 'vs-dark',
+                inherit: true,
+                colors: {},
+                rules: [
+                    { token: 'end', foreground: 'E86056' },
+                    { token: 'error', foreground: 'FF0000' },
+                    { token: 'function', foreground: 'E5C07B' }
+                ],
+            });
+            
+            // Define textscratch as a new language
+            monaco.languages.register({ id: 'textscratch' });
+            
+            // Define syntax highlighting for textscratch
+            monaco.languages.setMonarchTokensProvider('textscratch', {
+                tokenizer: {
+                    root: [
+                        // [/jmp\s+\d+/, 'keyword'],
+                        // [/jmp\s+\D/, 'error'],
+                        [/".*?"/, 'string'],
+                        [/motion|looks|sound|event|control|sensing|operator/, 'keyword'],
+                        [/flagClicked|keyPressed|spriteClicked/, 'variable'],
+                        [/wait/, 'variable'],
+                        [/(\/\/).*$/, 'comment'],
+                        [/[0-9]+/, 'number'],
+                        // [/[\[\]]/, 'delimiter'],
+                    ]
+                }
+            });
+            
+            // Register textscratch's language configuration (brackets, comments, etc.)
+            monaco.languages.setLanguageConfiguration('textscratch', {
+                comments: {
+                    lineComment: /\/\// // Single-line comments
+                },
+                brackets: [['(', ')']],
+                autoClosingPairs: [
+                    { open: '(', close: ')' }
+                ]
+            });
+
+
+            monaco.languages.registerCompletionItemProvider('textscratch', {
+                provideCompletionItems: function(model, position) {
+                    const lineContent = model.getLineContent(position.lineNumber);
+                    const textBeforeCursor = lineContent.substring(0, position.column - 1);
+
+                    const isEventContext = textBeforeCursor.trim().startsWith('event');
+                    function isInContext(evnter) { return textBeforeCursor.trim().startsWith(evnter) }
+                    const wordUntilPosition = model.getWordUntilPosition(position);
+                    const word = wordUntilPosition.word;
+
+                    var suggestions = [
+                        {
+                            label: 'motion',
+                            kind: monaco.languages.CompletionItemKind.Module,
+                            insertText: 'motion.',
+                            detail: 'Category'
+                        },
+                        {
+                            label: 'looks',
+                            kind: monaco.languages.CompletionItemKind.Module,
+                            insertText: 'looks.',
+                            detail: 'Category'
+                        },
+                        {
+                            label: 'sound',
+                            kind: monaco.languages.CompletionItemKind.Module,
+                            insertText: 'sound.',
+                            detail: 'Category'
+                        },
+                        {
+                            label: 'event',
+                            kind: monaco.languages.CompletionItemKind.Module,
+                            insertText: 'event.',
+                            detail: 'Category'
+                        },
+                        {
+                            label: 'control',
+                            kind: monaco.languages.CompletionItemKind.Function,
+                            insertText: 'control.',
+                            detail: 'Category'
+                        },
+                        {
+                            label: 'sensing',
+                            kind: monaco.languages.CompletionItemKind.Module,
+                            insertText: 'sensing.',
+                            detail: 'Category'
+                        },
+                        {
+                            label: 'operator',
+                            kind: monaco.languages.CompletionItemKind.Module,
+                            insertText: 'operator.',
+                            detail: 'Category'
+                        }
+                    ];
+
+                    if (isInContext("event.")) {
+                        suggestions.push({
+                            label: 'flagClicked',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'flagClicked',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Runs when flag clicked'
+                            }
+                        }, {
+                            label: 'keyPressed',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'keyPressed',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Runs when key pressed'
+                            }
+                        }, {
+                            label: 'spriteClicked',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'spriteClicked',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Runs when sprite clicked'
+                            }
+                        });
+                    }
+                    if (isInContext("control.")) {
+                        suggestions.push({
+                            label: 'wait',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'wait(',
+                            detail: 'Control',
+                            documentation: {
+                                value: 'Waits for amount of time'
+                            }
+                        });
+                    }
+
+                    // Filter suggestions based on the current word
+                    return {
+                        suggestions: suggestions.filter(item => item.label.startsWith(word))
+                    };
+                }
+            });
+
+            monaco.languages.registerHoverProvider('textscratch', {
+                provideHover: function(model, position) {
+                    // Get the word at the current position
+                    const word = model.getWordAtPosition(position);
+
+                    if (!word || !word.word.match(/^isz|jmp|dec|inc|stp$/) || syntaxHighlighting == false) {
+                        return null;
+                    }
+
+                    // Return the hover information
+                    return {
+                        contents: [
+                            { value: `
+    ${languageDir.commandUsage[word.word]}` }, // Markdown or plain text
+                            languageDir.commandDocs[word.word]
+                        ]
+                    };
+                }
+            });
+            var resetValue = [
+                    'event.flagClicked',
+                    'control.wait(10);'
+                ];
+            var modelStart;
+            if (lastCode) {
+                modelStart = lastCode.split('\n');
+            } else {
+                modelStart = resetValue;
+            }
+            // Create the Monaco Editor instance
+            const editor = monaco.editor.create(document.getElementById("container"), {
+                value: modelStart.join('\n'),
+                language: 'textscratch',
+                lineNumbersMinChars: 3, // Optional: Adjust width of line number gutter
+                theme: 'textscratch-dark',
+                fontSize: 16,
+                wordBasedSuggestions: false
+            });
+
+            // Function to perform validation and set markers
+            function validate() {
+                const model = editor.getModel();
+                const text = model.getValue();
+                const lines = text.split('\n');
+                const markers = [];
+                lines.forEach((line, index) => {
+                    if (line == "" && index + 1 == lines.length) {
+                        lines.splice(index, index);
+                    }
+                })
+                errors = 0;
+                warnings = 0;
+                localStorage.setItem("tsb3-recent", text)
+                lines.forEach((line, index) => {
+                    // Check for 'jmp' followed by non-numeric
+                    var lineOffset = 0
+                    editor.getModel().getValue().split("\n").forEach((line1, index1) => {
+                        if (index1 < index) {
+                            if (line1.slice(0, 1) == "#") {
+                                lineOffset += 1;
+                            }
+                            if (line1.slice(0, 1) == " ") {
+                                lineOffset += 1;
+                            }
+                            if (line1.slice(0, 1) == "") {
+                                lineOffset += 1;
+                            }
+                        }
+                    });
+                    // const matches = {
+                    //     "commandUnknown": (!line.match(/^((isz|jmp|dec|inc)\s+)|(stp$)/) && line.replace(" ", "") != "" && !line.match(/^#|;/)) && !line.match(/^stp\s*$/),
+                    //     "jmpIncorrect": line.match(/^jmp\s+\d*\D+\d*$/) || line.match(/^jmp\s\D+\d+\D+$/),
+                    //     "jmpDecIncIszMissing": line.match(/^(jmp|dec|inc|isz)\s*$/),
+                    //     "stpExtra": line.slice(4) != "" && !(line.slice(4).replace(" ", "") != "") && line.match(/^stp\s+/) && !line.match(/^stp\s\s$/),
+                    //     "jmpRange": lines.length - lineOffset <= parseInt(line.slice(4)),
+                    //     "jmpLoop": index - lineOffset == parseInt(line.slice(4)),
+                    //     "decIncIszIncorrect": line.match(/^(dec|inc|isz)\s+[A-Z]*[^A-Z]+[A-Z]*$/) || line.match(/^(dec|inc|isz)\s[^A-Z]+[A-Z]+[^A-Z]+$/)
+                    // };
+                    // if (matches["jmpDecIncIszMissing"]) {
+                    //     errors += 1;
+                    //     markers.push({
+                    //         severity: monaco.MarkerSeverity.Error,
+                    //         message: languageDir[line.slice(0, 3) + "Missing"],
+                    //         startLineNumber: index + 1,
+                    //         startColumn: 1,
+                    //         endLineNumber: index + 1,
+                    //         endColumn: 4
+                    //     });
+                    // } else if (matches["jmpIncorrect"]) {
+                    //     errors += 1;
+                    //     markers.push({
+                    //         severity: monaco.MarkerSeverity.Error,
+                    //         message: languageDir["jmpIncorrect"],
+                    //         startLineNumber: index + 1,
+                    //         startColumn: 5,
+                    //         endLineNumber: index + 1,
+                    //         endColumn: line.length + 1
+                    //     });
+                    // } else if (matches["decIncIszIncorrect"]) {
+                    //     errors += 1;
+                    //     markers.push({
+                    //         severity: monaco.MarkerSeverity.Error,
+                    //         message: languageDir[line.slice(0, 3) + "Incorrect"],
+                    //         startLineNumber: index + 1,
+                    //         startColumn: 5,
+                    //         endLineNumber: index + 1,
+                    //         endColumn: line.length + 1
+                    //     });
+                    // } else if (matches["jmpRange"]) {
+                    //     warnings += 1;
+                    //     markers.push({
+                    //         severity: monaco.MarkerSeverity.Warning,
+                    //         message: languageDir["jmpRange"],
+                    //         startLineNumber: index + 1,
+                    //         startColumn: 5,
+                    //         endLineNumber: index + 1,
+                    //         endColumn: line.length + 1
+                    //     });
+                    // } else if (matches["jmpLoop"]) {
+                    //     warnings += 1;
+                    //     markers.push({
+                    //         severity: monaco.MarkerSeverity.Warning,
+                    //         message: languageDir["jmpLoop"],
+                    //         startLineNumber: index + 1,
+                    //         startColumn: 1,
+                    //         endLineNumber: index + 1,
+                    //         endColumn: line.length + 1
+                    //     });
+                    // } else if (matches["stpExtra"]) {
+                    //     errors += 1;
+                    //     markers.push({
+                    //         severity: monaco.MarkerSeverity.Error,
+                    //         message: languageDir["stpExtra"],
+                    //         startLineNumber: index + 1,
+                    //         startColumn: 5,
+                    //         endLineNumber: index + 1,
+                    //         endColumn: line.length + 1
+                    //     });
+                    // } else if (matches["commandUnknown"]) {
+                    //     warnings += 1;
+                    //     markers.push({
+                    //         severity: monaco.MarkerSeverity.Warning,
+                    //         message: languageDir["commandUnknown"],
+                    //         startLineNumber: index + 1,
+                    //         startColumn: 1,
+                    //         endLineNumber: index + 1,
+                    //         endColumn: line.length + 1
+                    //     });
+                    // }
+                    const matches = {
+                        "commandUnknown": (!line.match(/^((isz|jmp|dec|inc)\s+)|(stp$)/) && line.replace(" ", "") != "" && !line.match(/^#|;/)) && !line.match(/^stp\s*$/),
+                        "jmpIncorrect": line.match(/^jmp\s+\d*\D+\d*$/) || line.match(/^jmp\s\D+\d+\D+$/),
+                        "jmpDecIncIszMissing": line.match(/^(jmp|dec|inc|isz)\s*$/),
+                        "stpExtra": line.slice(4) != "" && !(line.slice(4).replace(" ", "") != "") && line.match(/^stp\s+/) && !line.match(/^stp\s\s$/),
+                        "jmpRange": lines.length - lineOffset <= parseInt(line.slice(4)),
+                        "jmpLoop": index - lineOffset == parseInt(line.slice(4)),
+                        "decIncIszIncorrect": line.match(/^(dec|inc|isz)\s+[A-Z]*[^A-Z]+[A-Z]*$/) || line.match(/^(dec|inc|isz)\s[^A-Z]+[A-Z]+[^A-Z]+$/),
+                        "endsWithPunctuation": !line.match(/,|;$/) && index + 1 != lines.length && line != ""
+                    };
+                    if (matches["endsWithPunctuation"]) {
+                        errors += 1;
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Error,
+                            message: "Needs to end with , / ;",
+                            startLineNumber: index + 1,
+                            startColumn: line.length,
+                            endLineNumber: index + 1,
+                            endColumn: line.length + 1
+                        });
+                    }
+                });
+
+                // Set markers to show errors
+                monaco.editor.setModelMarkers(model, 'owner', markers);
+            }
+
+            // var codeActionCount = 0
+
+            // monaco.languages.registerCodeActionProvider('textscratch', {
+            //     provideCodeActions: function(model, range, context, token) {
+            //         const actions = [];
+
+            //         // Check if there's an error in the range that matches 'jmp' error
+                    
+            //         context.markers.forEach(marker => {
+            //             codeActionCount += 1
+            //             if (marker.message === languageDir["commandUnknown"]) {
+            //                 actions.push({
+            //                     title: 'Replace with "jmp 0"',
+            //                     kind: 'quickfix',
+            //                     edit: {
+            //                         edits: {
+            //                             resource: editor.getModel().uri,
+            //                             textEdit: {
+            //                                 range: new monaco.Range(marker.startLineNumber, marker.startColumn, marker.endLineNumber, marker.endColumn),
+            //                                 text: String(marker.startLineNumber)
+            //                             },
+            //                             versionId: codeActionCount
+            //                         }
+            //                     },
+            //                     isPreferred: true
+            //                 });
+            //             } else if (marker.message === languageDir["jmpIncorrect"]) {
+            //                 actions.push({
+            //                     title: `Replace with "jmp ${marker.startLineNumber}"`,
+            //                     kind: 'quickfix',
+            //                     edit: {
+            //                         resource: editor.getModel().uri,
+            //                         textEdit: {
+            //                             range: new monaco.Range(marker.startLineNumber, marker.startColumn, marker.endLineNumber, marker.endColumn),
+            //                             text: String(marker.startLineNumber)
+            //                         },
+            //                         versionId: codeActionCount
+            //                     },
+            //                     isPreferred: true
+            //                 });
+            //             }
+            //         });
+
+            //         return { actions, dispose: () => {} };
+            //     }
+            // });
+            // Attach validation function to editor changes
+            editor.getModel().onDidChangeContent(() => validate());
+            // Initial validation
+            validate();
+            // Function to resize the editor
+            function resizeEditor() {
+                if (window.innerWidth < 665) {
+                    document.getElementById("title").innerText = "tsb3";
+                } else if (window.innerWidth < 800) {
+                    document.getElementById("title").innerText = "tsb3 Editor";
+                } else {
+                    document.getElementById("title").innerText = "TextScratch Editor";
+                }
+                if (window.innerWidth < 470) {
+                    document.getElementById("btn-website").innerHTML = '<i class="fa-solid fa-fw fa-code-branch fa-sm" style="margin-right: 0px"></i>';
+                } else if (window.innerWidth < 530) {
+                    document.getElementById("btn-website").innerHTML = '<i class="fa-solid fa-fw fa-code-branch fa-sm" style="margin-right: 6px;"></i>Scratch';
+                } else {
+                    document.getElementById("btn-website").innerHTML = '<i class="fa-solid fa-fw fa-code-branch fa-sm" style="margin-right: 6px;"></i>Open Scratch';
+                }
+                if (window.innerWidth < 470) {
+                    document.getElementById("btn-export").innerHTML = '<i class="fa-solid fa-fw fa-file-export fa-sm" style="margin-right: 0px"></i>';
+                    document.getElementById("btn-reset").innerHTML = '<i class="fa-regular fa-fw fa-trash-can fa-sm" style="margin-right: 0px"></i>';
+                } else {
+                    document.getElementById("btn-export").innerHTML = '<i class="fa-solid fa-fw fa-file-export fa-sm" style="margin-right: 6px;"></i>Export';
+                    document.getElementById("btn-reset").innerHTML = '<i class="fa-regular fa-fw fa-trash-can fa-sm" style="margin-right: 0px"></i>Reset';
+                }
+                editor.layout();
+            }
+            var canceled = false;
+            document.getElementById("btn-export").addEventListener('click', () => {
+                project = defaultProject;
+                var editorText = editor.getModel().getValue().replace(/#/g, ";");
+                var editorText = removeSpacesOutsideQuotes(editorText.replaceAll("\n", ""))
+                var textGroups = editorText.split(";");
+                let textBlocks = []
+                textGroups.forEach((line, index) => {
+                    if (line != "") {
+                        textBlocks.push(line.split(","))
+                    }
+                });
+                console.log("Blocks:")
+                console.log(textBlocks)
+                let blockNames = [];
+                textBlocks.forEach((group, groupIndex) => {
+                    let groupLil = []
+                    group.forEach((block, blockIndex) => {
+                        groupLil.push(generateRandomString(20));
+                    });
+                    blockNames.push(groupLil);
+                });
+                console.log("Names:")
+                console.log(blockNames)
+                project.targets[1].blocks = {};
+                textBlocks.forEach((group, groupIndex) => {
+                    group.forEach((block, blockIndex) => {
+                        let blockOpcode;
+                        let blockInput;
+                        let blockField;
+                        let blockCategory = block.split(".")[0];
+                        let blockType = block.slicer(".", 1).split("{")[0].split("(")[0];
+                        let blockAttributes;
+                        if (block.slicer(".", 1).split("(")[1] != undefined) {
+                            blockAttributes = block.slicer(".", 1).split("(")[1].split(")")[0];
+                        }
+                        switch(blockCategory) {
+                            case "motion":
+                                switch(blockType) {
+                                    case "turnRight": blockOpcode = "motion_turnright"; blockInput = {"DEGREES": [1, [4, blockAttributes.replaceAll('"', "")]]}; break;
+                                    case "turnLeft": blockOpcode = "motion_turnleft"; blockInput = {"DEGREES": [1, [4, blockAttributes.replaceAll('"', "")]]}; break;
+                                }
+                                break;
+                            case "event":
+                                switch(blockType) {
+                                    case "flagClicked": blockOpcode = "event_whenflagclicked"; break;
+                                    case "spriteClicked": blockOpcode = "event_whenthisspriteclicked"; break;
+                                    case "keyPressed": blockOpcode = "event_whenkeypressed"; blockField = {"KEY_OPTION": [`${blockAttributes.replaceAll('"', "")}`, null]}; break;
+                                }
+                                break;
+                            case "control":
+                                switch(blockType) {
+                                    // case "wait": blockOpcode = "control_wait"; blockInput = {"DURATION": [1, [5, `${block.split(".")[1].split("(").splice(1).join("").replace(")", "")}`]]}; break;
+                                    case "wait": blockOpcode = "control_wait"; blockInput = {"DURATION": [1, [5, `${blockAttributes}`]]}; break;
+                                }
+                                break;
+                        }
+                        console.log("OpCode:")
+                        console.log(blockOpcode)
+                        project.targets[1].blocks[blockNames[groupIndex][blockIndex]] = {};
+                        if (blockOpcode) {
+                            (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).opcode = blockOpcode;
+                        }
+                        if (blockIndex != 0) {
+                            (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).parent = blockNames[groupIndex][blockIndex - 1];
+                            (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).topLevel = false;
+                        } else {
+                            (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).parent = null;
+                            (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).topLevel = true;
+                            (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).x = groupIndex * 300;
+                            (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).y = 0;
+                        }
+                        if (group.length - 1 != blockIndex) {
+                            (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).next = blockNames[groupIndex][blockIndex + 1];
+                        } else {
+                            (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).next = null;
+                        }
+                        if (blockInput) {
+                            (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).inputs = blockInput;
+                        } else {
+                            (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).inputs = {};
+                        }
+                        if (blockField) {
+                            (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).fields = blockField;
+                        } else {
+                            (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).fields = {};
+                        }
+                        (project.targets[1].blocks[blockNames[groupIndex][blockIndex]] ||= {}).shadow = false;
+                    });
+                });
+                console.log(project.targets[1].blocks)
+
+                // Create a new JSZip instance
+                const zip = new JSZip();
+
+                // Add the project.json file to the zip
+                zip.file("project.json", JSON.stringify(project));
+
+                // Load and add the images to the zip
+                const backdropImage = loadImage('backdrop.svg'); // Replace with your actual backdrop image path
+                const costumeImage = loadImage('costume1.svg'); // Replace with your actual costume image path
+
+                // Add the images to the ZIP
+                zip.file("cd21514d0531fdffb22204e0ec5ed84a.svg", backdropImage);
+                zip.file(`a98722f50129470f829e89b795f3a005.svg`, costumeImage);
+
+                // Load and add the sounds to the zip
+                const popSound = loadImage('pop.wav'); // Replace with your actual sound file path
+                const meowSound = loadImage('meow.wav'); // Replace with your actual sound file path
+
+                // Add the sounds to the ZIP
+                zip.file("83a9787d4cb6f3b7632b4ddfebf74367.wav", popSound);
+                zip.file("83c36d806dc92327b9e7049a565c6bff.wav", meowSound);
+
+                // Generate the zip file
+                zip.generateAsync({ type: "blob" }).then((content) => {
+                    // Create a link to download the Blob as a .sb3 file
+                    const url = URL.createObjectURL(content);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'new_project.sb3';
+                    if (downloadit) {
+                        a.click();
+                        downloadit = false;
+                    }
+                    URL.revokeObjectURL(url);
+                }).catch((error) => {
+                    console.error("Error generating ZIP:", error);
+                });
+                // navigator.clipboard.writeText(editorText)
+            });
+            document.getElementById("btn-reset").addEventListener('click', () => {
+                var blur = document.getElementById("blur")
+                var resetOverlay = document.getElementById("rs")
+                var resetOverlaySpinner = document.getElementById("rs-spinner")
+                var resetOverlayModel = document.getElementById("rs-model")
+                var resetOverlayErease = document.getElementById("rs-erease")
+                var resetOverlayReplace = document.getElementById("rs-replace")
+                var resetOverlayComplete = document.getElementById("rs-complete")
+                var resetOverlayCancel = document.getElementById("rs-cancel")
+                var copyMessage = document.getElementById("cm")
+                copyMessage.style.transform = 'translateY(80px)';
+                setTimeout(() => {
+                    copyMessage.style.visibility = "hidden";
+                    blur.style.filter = 'blur(10px)';
+                    setTimeout(() => {
+                        resetOverlay.style.visibility = 'visible';
+                        resetOverlay.style.opacity = 1;
+                        setTimeout(() => {
+                            resetOverlaySpinner.style.opacity = 1;
+                            setTimeout(() => {
+                                resetOverlaySpinner.style.marginBottom = '400px';
+                                setTimeout(() => {
+                                    var oldText = editor.getModel().getValue().split("\n")
+                                    var newText = [];
+                                    oldText.forEach((line, index) => {
+                                        if (index >= 13) {
+                                            return;
+                                        }
+                                        newText.push(line.slice(0, 52) + (" ".repeat(52 - line.slice(0, 52).length)));
+                                    });
+                                    for (let i = newText.length; i <= 12; i++) {
+                                        newText[i] = " ".repeat(52)
+                                    }
+                                    resetOverlayErease.style.opacity = 1;
+                                    resetOverlayModel.innerText = newText.join("\n");
+                                    resetOverlayModel.style.opacity = 1;
+                                    resetOverlayCancel.style.visibility = 'visible';
+                                    resetOverlayCancel.style.opacity = 1;
+                                    setTimeout(() => {
+                                        let linedText = newText.map(line => line.split(""));
+                                        function animateTextForeward() {
+                                            let allCharsUpdated = true;
+                                            for (let i = 0; i < linedText.length; i++) {
+                                                for (let j = 0; j < linedText[i].length; j++) {
+                                                    if (linedText[i][j] !== "#") {
+                                                        allCharsUpdated = false;
+                                                        linedText[i][j] = "#";
+                                                        resetOverlayModel.innerText = linedText.map(line => line.join("")).join("\n");
+                                                        break;
+                                                    }
+                                                }
+                                                if (!allCharsUpdated) break;
+                                            }
+                                            if (!allCharsUpdated) {
+                                                setTimeout(animateTextForeward, 10);
+                                            }
+                                        }
+                                        function animateTextBackward(originalText, delay = 10) {
+                                            let currentText = originalText.map(line => line.split(""));
+                                            function updateText() {
+                                                let updated = false;
+                                                for (let i = currentText.length - 1; i >= 0; i--) {
+                                                    for (let j = currentText[i].length - 1; j >= 0; j--) {
+                                                        if (currentText[i][j] === "#") {
+                                                            try {
+                                                                currentText[i][j] = resetValue[i][j]
+                                                            } catch(e) {
+                                                                currentText[i][j] = " "
+                                                            }
+                                                            updated = true;
+                                                            resetOverlayModel.innerText = currentText.map(line => line.join("")).join("\n");
+                                                            setTimeout(updateText, delay);
+                                                            return;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            updateText();
+                                        }
+                                        animateTextForeward();
+                                        setTimeout(() => {
+                                            if (!canceled) {
+                                                resetOverlayErease.style.opacity = 0;
+                                                newText = resetOverlayModel.innerText.split("\n")
+                                                resetOverlayReplace.style.opacity = 1;
+                                                animateTextBackward(newText, 5);
+                                                setTimeout(() => {
+                                                    if (!canceled) {
+                                                        resetOverlayModel.style.opacity = 0;
+                                                        resetOverlayReplace.style.opacity = 0;
+                                                        resetOverlayCancel.style.opacity = 0;
+                                                        setTimeout(() => {
+                                                            if (!canceled) {
+                                                                resetOverlayCancel.style.visibility = 'hidden';
+                                                                setTimeout(() => {
+                                                                    if (!canceled) {
+                                                                        resetOverlaySpinner.style.marginBottom = '0px';
+                                                                    }
+                                                                }, 200);
+                                                                setTimeout(() => {
+                                                                    if (!canceled) {
+                                                                        resetOverlayComplete.textContent = "Code Reset Successfull!";
+                                                                        resetOverlayComplete.style.opacity = 1;
+                                                                        setTimeout(() => {
+                                                                            if (!canceled) {
+                                                                                blur.style.filter = 'none';
+                                                                                setTimeout(() => {
+                                                                                    if (!canceled) {
+                                                                                        editor.getModel().setValue(resetValue.join("\n"))
+                                                                                        resetOverlay.style.opacity = 0;
+                                                                                        setTimeout(() => {
+                                                                                            if (!canceled) {
+                                                                                                copyMessage.style.visibility = "visible";
+                                                                                                resetOverlay.style.visibility = 'hidden';
+                                                                                                resetOverlayComplete.style.opacity = 0;
+                                                                                            }
+                                                                                        }, 300)
+                                                                                    }
+                                                                                }, 200)
+                                                                            }
+                                                                        }, 2400);
+                                                                    }
+                                                                }, 2400);
+                                                            }
+                                                        }, 1000);
+                                                    }
+                                                }, 5400);
+                                            }
+                                        }, 7900);
+                                    }, 800);
+                                }, 2000);
+                            }, 1300);
+                        }, 300);
+                    }, 200);
+                }, 500);
+            });
+            document.getElementById("rs-cancel").addEventListener('click', () => {
+                console.log("sad")
+                canceled = true;
+                var blur = document.getElementById("blur")
+                var resetOverlay = document.getElementById("rs")
+                var resetOverlaySpinner = document.getElementById("rs-spinner")
+                var resetOverlayModel = document.getElementById("rs-model")
+                var resetOverlayErease = document.getElementById("rs-erease")
+                var resetOverlayReplace = document.getElementById("rs-replace")
+                var resetOverlayComplete = document.getElementById("rs-complete")
+                var resetOverlayCancel = document.getElementById("rs-cancel")
+                var copyMessage = document.getElementById("cm")
+                resetOverlayModel.style.opacity = 0;
+                resetOverlayReplace.style.opacity = 0;
+                resetOverlayComplete.style.opacity = 0;
+                resetOverlayErease.style.opacity = 0;
+                resetOverlayCancel.style.opacity = 0;
+                setTimeout(() => {
+                    resetOverlayCancel.style.visibility = 'hidden';
+                    setTimeout(() => {
+                        resetOverlaySpinner.style.marginBottom = '0px';
+                    }, 200);
+                    // resetOverlayComplete.style.transform = "none";
+                    setTimeout(() => {
+                        resetOverlayComplete.textContent = "Code Reset Cancalled!";
+                        resetOverlayComplete.style.opacity = 1;
+                        setTimeout(() => {
+                            // resetOverlay.style.visibility = 'hidden';
+                            
+                            blur.style.filter = 'none';
+                            setTimeout(() => {
+                                resetOverlay.style.opacity = 0;
+                                setTimeout(() => {
+                                    copyMessage.style.visibility = "visible";
+                                    resetOverlay.style.visibility = 'hidden';
+                                    resetOverlayComplete.style.opacity = 0;
+                                    canceled = false;
+                                }, 300)
+                            }, 200)
+                        }, 2400);
+                    }, 2400);
+                }, 1000);
+            });
+
+            // Add event listener for window resize
+            window.addEventListener('resize', resizeEditor);
+
+            // Initial resize to make sure editor fills the window on load
+            resizeEditor();
+        });
+    </script>
+</body>
+</html>

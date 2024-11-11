@@ -26,5 +26,48 @@
                                 "fields": {},
                                 "shadow": false,
                                 "topLevel": false
+                            },
+                            "flagClicked1": {
+                              "opcode": "event_whenflagclicked",
+                              "next": "wait1",
+                              "parent": null,
+                              "inputs": {},
+                              "fields": {},
+                              "shadow": false,
+                              "topLevel": true,
+                              "x": 599,
+                              "y": 219
+                            },
+                            "wait1": {
+                              "opcode": "control_wait",
+                              "next": "ask1",
+                              "parent": "flagClicked1",
+                              "inputs": {
+                                "DURATION": [
+                                  1,
+                                  [
+                                    5,
+                                    "1"
+                                  ]
+                                ]
+                              },
+                              "fields": {},
+                              "shadow": false,
+                              "topLevel": false
+                            },
+                            "ask1": {
+                              "opcode": "sensing_askandwait",
+                              "next": null,
+                              "parent": "wait1",
+                              "inputs": {
+                                "QUESTION": [
+                                  1,
+                                  [
+                                    10,
+                                    "What's your name?"
+                                  ]
+                                ]
+                              },
+                              "topLevel": false
                             }
 }
