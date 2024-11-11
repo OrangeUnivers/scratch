@@ -824,6 +824,7 @@
                         // [/jmp\s+\D/, 'error'],
                         [/".*?"/, 'string'],
                         [/motion|looks|sound|event|control|sensing|operator/, 'keyword'],
+                        [/turnLeft|turnRight|position/, 'variable'],
                         [/flagClicked|keyPressed|spriteClicked/, 'variable'],
                         [/wait/, 'variable'],
                         [/(\/\/).*$/, 'comment'],
@@ -899,7 +900,33 @@
                             detail: 'Category'
                         }
                     ];
-
+                    if (isInContext("motion.")) {
+                        suggestions.push({
+                            label: 'turnLeft',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'turnLeft(',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Turns sprite left'
+                            }
+                        }, {
+                            label: 'turnRight',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'turnRight(',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Turns sprite right'
+                            }
+                        }, {
+                            label: 'position',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'position(',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Sets position'
+                            }
+                        });
+                    }
                     if (isInContext("event.")) {
                         suggestions.push({
                             label: 'flagClicked',
@@ -912,7 +939,7 @@
                         }, {
                             label: 'keyPressed',
                             kind: monaco.languages.CompletionItemKind.Method,  // Method icon
-                            insertText: 'keyPressed',
+                            insertText: 'keyPressed(',
                             detail: 'Event',
                             documentation: {
                                 value: 'Runs when key pressed'
@@ -1238,6 +1265,7 @@
                                 switch(blockType) {
                                     case "turnRight": blockOpcode = "motion_turnright"; blockInput = {"DEGREES": [1, [4, blockAttributes.replaceAll('"', "")]]}; break;
                                     case "turnLeft": blockOpcode = "motion_turnleft"; blockInput = {"DEGREES": [1, [4, blockAttributes.replaceAll('"', "")]]}; break;
+                                    case "position": blockOpcode = "motion_gotoxy"; blockInput = {"X": [1, [4, blockAttributes.split("/")[0]]],"Y": [1, [4, blockAttributes.split("/")[1]]]}; break;
                                 }
                                 break;
                             case "event":
