@@ -744,9 +744,33 @@
                 }
             });
         }
+        function splitOutsideBrackets(text) {
+            const result = [];
+            let buffer = "";
+            let depth = 0;
+
+            for (let char of text) {
+                if (char === ',' && depth === 0) {
+                    // Only split at commas that are outside of any brackets
+                    result.push(buffer.trim());
+                    buffer = "";
+                } else {
+                    // Add character to buffer
+                    buffer += char;
+                    // Track the depth based on parentheses and braces
+                    if (char === '(' || char === '{') depth++;
+                    else if (char === ')' || char === '}') depth--;
+                }
+            }
+        
+            // Add the last buffered part to the result
+            if (buffer) result.push(buffer.trim());
+        
+            return result;
+        }
         function generateRandomString(length) {
-            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            let result = '';
+            const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            let result = "";
             for (let i = 0; i < length; i++) {
                 const randomIndex = Math.floor(Math.random() * characters.length);
                 result += characters[randomIndex];
@@ -924,6 +948,54 @@
                             detail: 'Event',
                             documentation: {
                                 value: 'Sets position'
+                            }
+                        }, {
+                            label: 'edgeBounce',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'edgeBounce',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Bounces on edge?'
+                            }
+                        }, {
+                            label: 'setX',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'setX(',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Sets X'
+                            }
+                        }, {
+                            label: 'setY',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'setY(',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Sets Y'
+                            }
+                        }, {
+                            label: 'changeX',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'changeX(',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Changes X'
+                            }
+                        }, {
+                            label: 'changeY',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'changeY(',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Changes Y'
+                            }
+                        }, {
+                            label: 'direction',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'direction(',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Sets direction'
                             }
                         });
                     }
@@ -1224,6 +1296,18 @@
                 }
                 editor.layout();
             }
+            function jsonNumber(list) {
+                // [1, 4, value, 4, 8, name]
+                currentElements = {};
+                list.forEach((element) => {
+                    if (/^\d+$/.test(element[2])) {
+                        currentElements[element[5]] = [element[0], [element[1], element[2]]]
+                    } else {
+                        currentElements[element[5]] = [element[3], element[2], [element[4], ""]]
+                    }
+                })
+                return currentElements;
+            }
             var canceled = false;
             document.getElementById("btn-export").addEventListener('click', () => {
                 project = defaultProject;
@@ -1233,7 +1317,7 @@
                 let textBlocks = []
                 textGroups.forEach((line, index) => {
                     if (line != "") {
-                        textBlocks.push(line.split(/,$/))
+                        textBlocks.push(splitOutsideBrackets(line))
                     }
                 });
                 console.log("Blocks:")
@@ -1246,6 +1330,7 @@
                     });
                     blockNames.push(groupLil);
                 });
+                let operatorList = [];
                 console.log("Names:")
                 console.log(blockNames)
                 project.targets[1].blocks = {};
@@ -1260,33 +1345,34 @@
                         if (block.slicer(".", 1).split("(")[1] != undefined) {
                             blockAttributes = block.slicer(".", 1).split("(")[1].split(")")[0].split(",");
                         }
-                        blockAttributes.forEach((element, index) => {
-                            if (element.match(/[\/\*\+\-]+/)) {
-                                
-        //                         {
-        //     "opcode": "operator_divide",
-        //     "next": null,
-        //     "parent": "Wait1",
-        //     "inputs": {
-        //       "NUM1": [
-        //         1,
-        //         [
-        //           4,
-        //           "3"
-        //         ]
-        //       ],
-        //       "NUM2": [
-        //         1,
-        //         [
-        //           4,
-        //           "2"
-        //         ]
-        //       ]
-        //     },
-        //     "fields": {},
-        //     "shadow": false,
-        //     "topLevel": false
-        //   }
+                        blockAttributes.forEach((operatorElement, operatorIndex) => {
+                            if (/^(?:[^\/\*\+\-]+[\/\*\+\-][^\/\*\+\-]+)$/.test(operatorElement)) {
+                                let operatorName = generateRandomString(20);
+                                operatorList.push({name: operatorElement, position: {group: groupIndex, block: blockIndex}})
+                                project.targets[1].blocks[operatorName] = {};
+                                if (operatorElement.includes("/")) {
+                                    (project.targets[1].blocks[operatorName] ||= {}).opcode = "operator_divide";
+                                    (project.targets[1].blocks[operatorName] ||= {}).inputs = {"NUM1": [1, [4, blockAttributes[operatorIndex].split("/")[0]]], "NUM2": [1, [4, blockAttributes[operatorIndex].split("/")[1]]]};
+                                }
+                                if (operatorElement.includes("*")) {
+                                    (project.targets[1].blocks[operatorName] ||= {}).opcode = "operator_multiply";
+                                    (project.targets[1].blocks[operatorName] ||= {}).inputs = {"NUM1": [1, [4, blockAttributes[operatorIndex].split("*")[0]]], "NUM2": [1, [4, blockAttributes[operatorIndex].split("*")[1]]]};
+                                }
+                                if (operatorElement.includes("+")) {
+                                    (project.targets[1].blocks[operatorName] ||= {}).opcode = "operator_add";
+                                    (project.targets[1].blocks[operatorName] ||= {}).inputs = {"NUM1": [1, [4, blockAttributes[operatorIndex].split("+")[0]]], "NUM2": [1, [4, blockAttributes[operatorIndex].split("+")[1]]]};
+                                }
+                                if (operatorElement.includes("-")) {
+                                    (project.targets[1].blocks[operatorName] ||= {}).opcode = "operator_subtract";
+                                    (project.targets[1].blocks[operatorName] ||= {}).inputs = {"NUM1": [1, [4, blockAttributes[operatorIndex].split("-")[0]]], "NUM2": [1, [4, blockAttributes[operatorIndex].split("-")[1]]]};
+                                }
+                                (project.targets[1].blocks[operatorName] ||= {}).next = null;
+                                (project.targets[1].blocks[operatorName] ||= {}).parent = blockNames[groupIndex][blockIndex];
+                                (project.targets[1].blocks[operatorName] ||= {}).fields = {};
+                                (project.targets[1].blocks[operatorName] ||= {}).shadow = false;
+                                (project.targets[1].blocks[operatorName] ||= {}).topLevel = false;
+                                blockAttributes[operatorIndex] = operatorName;
+                            } else if ((operatorElement.match(/[\/\*\+\-]/g) || []).length >= 2) {
                             }
                         });
                         switch(blockCategory) {
@@ -1295,6 +1381,25 @@
                                     case "turnRight": blockOpcode = "motion_turnright"; blockInput = {"DEGREES": [1, [4, blockAttributes[0].replaceAll('"', "")]]}; break;
                                     case "turnLeft": blockOpcode = "motion_turnleft"; blockInput = {"DEGREES": [1, [4, blockAttributes[0].replaceAll('"', "")]]}; break;
                                     case "position": blockOpcode = "motion_gotoxy"; blockInput = {"X": [1, [4, blockAttributes[0]]],"Y": [1, [4, blockAttributes[1]]]}; break;
+                                    case "edgeBounce": blockOpcode = "motion_ifonedgebounce"; break;
+                                    case "changeX": blockOpcode = "motion_changexby"; blockInput = jsonNumber([[1, 5, blockAttributes[0], 3, 5, "DX"]]); break;
+                                    case "changeY": blockOpcode = "motion_changexby"; blockInput = jsonNumber([[1, 5, blockAttributes[0], 3, 5, "DY"]]); break;
+                                    case "setX": blockOpcode = "motion_changexby"; blockInput = jsonNumber([[1, 5, blockAttributes[0], 3, 5, "X"]]); break;
+                                    case "setY": blockOpcode = "motion_changexby"; blockInput = jsonNumber([[1, 5, blockAttributes[0], 3, 5, "Y"]]); break;
+                                    case "direction": blockOpcode = "motion_pointindirection"; blockInput = jsonNumber([[1, 8, blockAttributes[0], 3, 8, "DIRECTION"]]); break;
+                                }
+                                break;
+                            case "looks":
+                                switch(blockType) {
+                                    case "say": if (blockAttributes >= 2) {blockOpcode = "looks_sayforsecs"; blockInput = {"MESSAGE": [1, [10, blockAttributes[0].replaceAll('"', "")]], "SECS": [1, [4, blockAttributes[1]]]};} else {
+                                        blockOpcode = "looks_say"; blockInput = {"MESSAGE": [1, [10, blockAttributes[0].replaceAll('"', "")]]};}; break;
+                                    case "think": if (blockAttributes >= 2) {blockOpcode = "looks_thinkforsecs"; blockInput = {"MESSAGE": [1, [10, blockAttributes[0].replaceAll('"', "")]], "SECS": [1, [4, blockAttributes[1]]]};} else {
+                                        blockOpcode = "looks_think"; blockInput = {"MESSAGE": [1, [10, blockAttributes[0].replaceAll('"', "")]]};}; break;
+                                }
+                                break;
+                            case "sound":
+                                switch(blockType) {
+                                    case "stop": blockOpcode = "sound_stopallsounds"; break;
                                 }
                                 break;
                             case "event":
@@ -1307,7 +1412,14 @@
                             case "control":
                                 switch(blockType) {
                                     // case "wait": blockOpcode = "control_wait"; blockInput = {"DURATION": [1, [5, `${block.split(".")[1].split("(").splice(1).join("").replace(")", "")}`]]}; break;
-                                    case "wait": blockOpcode = "control_wait"; blockInput = {"DURATION": [1, [5, `${blockAttributes[0]}`]]}; break;
+                                    case "wait": blockOpcode = "control_wait"; blockInput = jsonNumber([[1, 5, blockAttributes[0], 3, 5, "DURATION"]]); break;
+                                    case "stop": blockOpcode = "control_stop"; blockField = {"STOP_OPTION": [`${blockAttributes[0].replaceAll('"', "")}`, null]}; break;
+                                }
+                                break;
+                            case "sensing":
+                                switch(blockType) {
+                                    // case "wait": blockOpcode = "control_wait"; blockInput = {"DURATION": [1, [5, `${block.split(".")[1].split("(").splice(1).join("").replace(")", "")}`]]}; break;
+                                    case "dragMode": blockOpcode = "sensing_setdragmode"; blockField = {"DRAG_MODE": [`${blockAttributes[0].replaceAll('"', "")}`, null]}; break;
                                 }
                                 break;
                         }
