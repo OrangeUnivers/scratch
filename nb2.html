@@ -848,9 +848,12 @@
                         // [/jmp\s+\D/, 'error'],
                         [/".*?"/, 'string'],
                         [/motion|looks|sound|event|control|sensing|operator/, 'keyword'],
-                        [/turnLeft|turnRight|position/, 'variable'],
+                        [/turnLeft|turnRight|position|edgeBounce|changeX|changeY|setX|setY|direction/, 'variable'],
+                        [/say|think/, 'variable'],
+                        [/stop/, 'variable'],
                         [/flagClicked|keyPressed|spriteClicked/, 'variable'],
                         [/wait/, 'variable'],
+                        [/stop/, 'dragMode'],
                         [/(\/\/).*$/, 'comment'],
                         [/[0-9]+/, 'number'],
                         // [/[\[\]]/, 'delimiter'],
@@ -999,6 +1002,36 @@
                             }
                         });
                     }
+                    if (isInContext("looks.")) {
+                        suggestions.push({
+                            label: 'say',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'say(',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Says something'
+                            }
+                        }, {
+                            label: 'think',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'think(',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Thinks something'
+                            }
+                        });
+                    }
+                    if (isInContext("sound.")) {
+                        suggestions.push({
+                            label: 'stop',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'stop',
+                            detail: 'Event',
+                            documentation: {
+                                value: 'Stops all running sounds'
+                            }
+                        });
+                    }
                     if (isInContext("event.")) {
                         suggestions.push({
                             label: 'flagClicked',
@@ -1034,6 +1067,14 @@
                             detail: 'Control',
                             documentation: {
                                 value: 'Waits for amount of time'
+                            }
+                        }, {
+                            label: 'stop',
+                            kind: monaco.languages.CompletionItemKind.Method,  // Method icon
+                            insertText: 'stop',
+                            detail: 'Control',
+                            documentation: {
+                                value: 'Stops any type of Script'
                             }
                         });
                     }
@@ -1344,37 +1385,37 @@
                         let blockAttributes;
                         if (block.slicer(".", 1).split("(")[1] != undefined) {
                             blockAttributes = block.slicer(".", 1).split("(")[1].split(")")[0].split(",");
+                            blockAttributes.forEach((operatorElement, operatorIndex) => {
+                                if (/^(?:[^\/\*\+\-]+[\/\*\+\-][^\/\*\+\-]+)$/.test(operatorElement)) {
+                                    let operatorName = generateRandomString(20);
+                                    operatorList.push({name: operatorElement, position: {group: groupIndex, block: blockIndex}})
+                                    project.targets[1].blocks[operatorName] = {};
+                                    if (operatorElement.includes("/")) {
+                                        (project.targets[1].blocks[operatorName] ||= {}).opcode = "operator_divide";
+                                        (project.targets[1].blocks[operatorName] ||= {}).inputs = {"NUM1": [1, [4, blockAttributes[operatorIndex].split("/")[0]]], "NUM2": [1, [4, blockAttributes[operatorIndex].split("/")[1]]]};
+                                    }
+                                    if (operatorElement.includes("*")) {
+                                        (project.targets[1].blocks[operatorName] ||= {}).opcode = "operator_multiply";
+                                        (project.targets[1].blocks[operatorName] ||= {}).inputs = {"NUM1": [1, [4, blockAttributes[operatorIndex].split("*")[0]]], "NUM2": [1, [4, blockAttributes[operatorIndex].split("*")[1]]]};
+                                    }
+                                    if (operatorElement.includes("+")) {
+                                        (project.targets[1].blocks[operatorName] ||= {}).opcode = "operator_add";
+                                        (project.targets[1].blocks[operatorName] ||= {}).inputs = {"NUM1": [1, [4, blockAttributes[operatorIndex].split("+")[0]]], "NUM2": [1, [4, blockAttributes[operatorIndex].split("+")[1]]]};
+                                    }
+                                    if (operatorElement.includes("-")) {
+                                        (project.targets[1].blocks[operatorName] ||= {}).opcode = "operator_subtract";
+                                        (project.targets[1].blocks[operatorName] ||= {}).inputs = {"NUM1": [1, [4, blockAttributes[operatorIndex].split("-")[0]]], "NUM2": [1, [4, blockAttributes[operatorIndex].split("-")[1]]]};
+                                    }
+                                    (project.targets[1].blocks[operatorName] ||= {}).next = null;
+                                    (project.targets[1].blocks[operatorName] ||= {}).parent = blockNames[groupIndex][blockIndex];
+                                    (project.targets[1].blocks[operatorName] ||= {}).fields = {};
+                                    (project.targets[1].blocks[operatorName] ||= {}).shadow = false;
+                                    (project.targets[1].blocks[operatorName] ||= {}).topLevel = false;
+                                    blockAttributes[operatorIndex] = operatorName;
+                                } else if ((operatorElement.match(/[\/\*\+\-]/g) || []).length >= 2) {
+                                }
+                            });
                         }
-                        blockAttributes.forEach((operatorElement, operatorIndex) => {
-                            if (/^(?:[^\/\*\+\-]+[\/\*\+\-][^\/\*\+\-]+)$/.test(operatorElement)) {
-                                let operatorName = generateRandomString(20);
-                                operatorList.push({name: operatorElement, position: {group: groupIndex, block: blockIndex}})
-                                project.targets[1].blocks[operatorName] = {};
-                                if (operatorElement.includes("/")) {
-                                    (project.targets[1].blocks[operatorName] ||= {}).opcode = "operator_divide";
-                                    (project.targets[1].blocks[operatorName] ||= {}).inputs = {"NUM1": [1, [4, blockAttributes[operatorIndex].split("/")[0]]], "NUM2": [1, [4, blockAttributes[operatorIndex].split("/")[1]]]};
-                                }
-                                if (operatorElement.includes("*")) {
-                                    (project.targets[1].blocks[operatorName] ||= {}).opcode = "operator_multiply";
-                                    (project.targets[1].blocks[operatorName] ||= {}).inputs = {"NUM1": [1, [4, blockAttributes[operatorIndex].split("*")[0]]], "NUM2": [1, [4, blockAttributes[operatorIndex].split("*")[1]]]};
-                                }
-                                if (operatorElement.includes("+")) {
-                                    (project.targets[1].blocks[operatorName] ||= {}).opcode = "operator_add";
-                                    (project.targets[1].blocks[operatorName] ||= {}).inputs = {"NUM1": [1, [4, blockAttributes[operatorIndex].split("+")[0]]], "NUM2": [1, [4, blockAttributes[operatorIndex].split("+")[1]]]};
-                                }
-                                if (operatorElement.includes("-")) {
-                                    (project.targets[1].blocks[operatorName] ||= {}).opcode = "operator_subtract";
-                                    (project.targets[1].blocks[operatorName] ||= {}).inputs = {"NUM1": [1, [4, blockAttributes[operatorIndex].split("-")[0]]], "NUM2": [1, [4, blockAttributes[operatorIndex].split("-")[1]]]};
-                                }
-                                (project.targets[1].blocks[operatorName] ||= {}).next = null;
-                                (project.targets[1].blocks[operatorName] ||= {}).parent = blockNames[groupIndex][blockIndex];
-                                (project.targets[1].blocks[operatorName] ||= {}).fields = {};
-                                (project.targets[1].blocks[operatorName] ||= {}).shadow = false;
-                                (project.targets[1].blocks[operatorName] ||= {}).topLevel = false;
-                                blockAttributes[operatorIndex] = operatorName;
-                            } else if ((operatorElement.match(/[\/\*\+\-]/g) || []).length >= 2) {
-                            }
-                        });
                         switch(blockCategory) {
                             case "motion":
                                 switch(blockType) {
